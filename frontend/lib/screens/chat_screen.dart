@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:frontend/screens/resources_screen.dart';
 import '../widgets/chat_bubble.dart';
 import '../models/message.dart';
 import '../services/chat_service.dart';
+import 'resources_screen.dart';
 
 class ChatScreen extends StatefulWidget {
   @override
