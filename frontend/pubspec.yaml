@@ -31,8 +31,12 @@ dependencies:
   flutter:
     sdk: flutter
   # flutter_tts: ^3.8.5
-  # speech_to_text: ^6.5.1
+  speech_to_text: ^6.5.1
   http: ^1.2.0
+  google_fonts: ^6.1.0
+
+  intl: ^0.19.0
+  font_awesome_flutter: ^10.4.0  # Add this line
 
 
   # The following adds the Cupertino Icons font to your application.

@@ -1,0 +1,3 @@
+requests
+ibm-watsonx-ai
+flask
