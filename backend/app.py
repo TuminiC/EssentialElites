@@ -20,10 +20,10 @@ app.add_middleware(
     allow_headers=["*"],  # Allows all headers
 )
 credentials = Credentials(
-    api_key="Rd0fBoSeWEwy5EH00xYmPtqYVUKL49HirtXv38V9astL",
+    api_key="",
     url="https://us-south.ml.cloud.ibm.com")
 
-client = APIClient(credentials, project_id="34546867-0bf7-4cf5-83aa-c71fb3dcb12b")
+client = APIClient(credentials, project_id="")
 
 # model_inference = ModelInference(
 #     model_id="meta-llama/llama-3-4b-chat",
@@ -48,7 +48,7 @@ model_inference = ModelInference(
     model_id=client.foundation_models.TextModels.LLAMA_3_405B_INSTRUCT,
     params=generate_params,
     credentials=credentials,
-    project_id="34546867-0bf7-4cf5-83aa-c71fb3dcb12b"
+    project_id=""
 )
 
 class ChatMessage(BaseModel):
