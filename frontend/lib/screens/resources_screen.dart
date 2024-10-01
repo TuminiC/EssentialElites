@@ -13,6 +13,7 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
   final LocationService _locationService = LocationService();
   List<Resource> _resources = [];
   bool _isLoading = true;
+  String _errorMessage = '';
 
   @override
   void initState() {
@@ -20,64 +21,49 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
     _loadResources();
   }
 
-  void _loadResources() async {
-    final resources = await _locationService.getNearbyResources();
-    setState(() {
-      _resources = resources;
-      _isLoading = false;
-    });
+  Future<void> _loadResources() async {
+    setState(() => _isLoading = true);
+    try {
+        final resources = await _locationService.getNearbyResources();
+        setState(() {
+        _resources = resources;
+        _isLoading = false;
+        _errorMessage = '';
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Error loading resources: $e';
+        _isLoading = false;
+      });
+    }
+      
   }
 
-  @override
+   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Color(0xFFF0F4FF),
-      appBar: AppBar(
-        title: Text(
-          'Local Resources',
-          style: TextStyle(color: Color(0xFF4285F4), fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: Icon(Icons.person_outline, color: Colors.black),
-            onPressed: () {},
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            title: Text(
+              'Local Resources',
+              style: TextStyle(color: Color(0xFF4285F4), fontWeight: FontWeight.bold),
+            ),
+            backgroundColor: Colors.white,
+            floating: true,
+            snap: true,
           ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Search resources or type...',
-                hintStyle: TextStyle(color: Colors.grey),
-                prefixIcon: Icon(Icons.search, color: Colors.grey),
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30),
-                  borderSide: BorderSide.none,
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
-                ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: Text(
+                'Mental health resources near you:',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
             ),
           ),
-          Expanded(
-            child: _isLoading
-                ? Center(child: CircularProgressIndicator())
-                : ListView.builder(
-                    itemCount: _resources.length,
-                    itemBuilder: (context, index) {
-                      return ResourceCard(resource: _resources[index]);
-                    },
-                  ),
-          ),
+          _buildResourceList(),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
@@ -99,9 +85,42 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline), label: 'Chat'),
           BottomNavigationBarItem(icon: Icon(Icons.location_on_outlined), label: 'Resources'),
-          
         ],
       ),
     );
+  }
+
+    Widget _buildResourceList() {
+    if (_isLoading) {
+      return SliverFillRemaining(
+        child: Center(child: CircularProgressIndicator()),
+      );
+    } else if (_errorMessage.isNotEmpty) {
+      return SliverFillRemaining(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(_errorMessage),
+              ElevatedButton(
+                onPressed: _loadResources,
+                child: Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    } else if (_resources.isEmpty) {
+      return SliverFillRemaining(
+        child: Center(child: Text('No resources found.')),
+      );
+    } else {
+      return SliverList(
+        delegate: SliverChildBuilderDelegate(
+          (context, index) => ResourceCard(resource: _resources[index]),
+          childCount: _resources.length,
+        ),
+      );
+    }
   }
 }
