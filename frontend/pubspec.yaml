@@ -31,6 +31,8 @@ dependencies:
   flutter:
     sdk: flutter
   flutter_tts: ^3.6.3
+  audioplayers: ^6.1.0
+  fluttertoast: ^8.0.9
   #speech_to_text: ^6.5.1
   web_socket_channel: ^2.4.0
   http: ^1.2.0
@@ -67,6 +69,11 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  assets:
+    - assets/images/meditation_background.png
+    - assets/audio/soft_background.mp3
+
 
   # To add assets to your application, add an assets section, like this:
   # assets:

@@ -11,7 +11,7 @@ class ResourceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      elevation: 2,
+      elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: EdgeInsets.all(16),
@@ -23,37 +23,30 @@ class ResourceCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF4285F4),
+                color: Color(0xFF6C63FF),
               ),
             ),
             SizedBox(height: 8),
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: Color(0xFFE8EAFD),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
+            Chip(
+              label: Text(
                 resource.type,
-                style: TextStyle(color: Color(0xFF4285F4), fontWeight: FontWeight.w500),
+                style: TextStyle(color: Color(0xFF6C63FF), fontWeight: FontWeight.w500),
               ),
+              backgroundColor: Color(0xFFE8EAFD),
             ),
-            // SizedBox(height: 12),
-            // Text(
-            //   resource.description,
-            //   style: TextStyle(fontSize: 14, color: Colors.black87),
-            // ),
             SizedBox(height: 12),
             _buildInfoRow(Icons.location_on, resource.address),
             SizedBox(height: 4),
             _buildInfoRow(Icons.phone, resource.phone),
             SizedBox(height: 16),
-            ElevatedButton(
+            ElevatedButton.icon(
               onPressed: () => _launchPhone(resource.phone),
-              child: Text('Call Now'),
+              icon: Icon(Icons.phone, color: Colors.white),
+              label: Text('Call Now'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFF4285F4),
+                backgroundColor: Color(0xFF6C63FF),
                 foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
                 ),
@@ -85,7 +78,10 @@ class ResourceCard extends StatelessWidget {
     if (await canLaunch(url)) {
       await launch(url);
     } else {
-      print('Could not launch $url');
+      // Handle the error gracefully
+      // ScaffoldMessenger.of(.).showSnackBar(
+      //   SnackBar(content: Text('Could not launch phone dialer')),
+      // );
     }
   }
 }

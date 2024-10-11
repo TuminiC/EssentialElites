@@ -25,31 +25,31 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _addAIResponse(String response) {
-  setState(() {
-    if (_messages.isNotEmpty && !_messages.last.isUser) {
-      _messages.last = Message(text: _messages.last.text + response, isUser: false);
-    } else {
-      _messages.add(Message(text: response, isUser: false));
-    }
-  });
-  _scrollToBottom();
-}
+    setState(() {
+      if (_messages.isNotEmpty && !_messages.last.isUser) {
+        _messages.last = Message(text: _messages.last.text + response, isUser: false);
+      } else {
+        _messages.add(Message(text: response, isUser: false));
+      }
+    });
+    _scrollToBottom();
+  }
 
   void _connectWebSocket() {
-  channel = WebSocketChannel.connect(
-    Uri.parse('ws://127.0.0.1:8000/ws'),
-  );
+    channel = WebSocketChannel.connect(
+      Uri.parse('ws://127.0.0.1:8000/ws'),
+    );
 
-  channel.stream.listen((message) {
-    if (message == '[EOS]') {
-      // End of stream, do nothing
-    } else {
-      _updateAIResponse(message);
-    }
-  });
-}
+    channel.stream.listen((message) {
+      if (message == '[EOS]') {
+        // End of stream, do nothing
+      } else {
+        _updateAIResponse(message);
+      }
+    });
+  }
 
-void _updateAIResponse(String message) {
+  void _updateAIResponse(String message) {
     setState(() {
       _isReceivingResponse = true;
       _currentAIResponse += message;
@@ -69,27 +69,18 @@ void _updateAIResponse(String message) {
     });
   }
 
-
-  // void _sendMessage(String message) {
-  //   if (message.isNotEmpty) {
-  //     _addMessage(Message(text: message, isUser: true));
-  //     channel.sink.add('{"message": "$message"}');
-  //     _textController.clear();
-  //   }
-  // }
   void _sendMessage(String message) {
-  if (message.isNotEmpty) {
-    setState(() {
-      _currentAIResponse = '';
-      _isReceivingResponse = false;
-      _messages.add(Message(text: message, isUser: true));
-    });
-    channel.sink.add('{"message": "$message"}');
-    _textController.clear();
-    _scrollToBottom();
+    if (message.isNotEmpty) {
+      setState(() {
+        _currentAIResponse = '';
+        _isReceivingResponse = false;
+        _messages.add(Message(text: message, isUser: true));
+      });
+      channel.sink.add('{"message": "$message"}');
+      _textController.clear();
+      _scrollToBottom();
     }
   }
-
 
   void _addMessage(Message message) {
     setState(() {
@@ -107,55 +98,11 @@ void _updateAIResponse(String message) {
       );
     });
   }
-    
+
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Color(0xFFF0F4FF),
-      appBar: AppBar(
-        title: Text('AI Therapist Chat', style: TextStyle(color: Color(0xFF4285F4))),
-        backgroundColor: Colors.white,
-        elevation: 0,  
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-                controller: _scrollController,
-                padding: EdgeInsets.all(16),
-                itemCount: _messages.length,
-                itemBuilder: (context, index) {
-                  return ChatBubble(message: _messages[index]);
-                }    
-              ),
-          ),
-          _buildMessageComposer(),
-        ] 
-      ),
-    
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: Colors.white,
-        selectedItemColor: Color(0xFF4285F4),
-        unselectedItemColor: Colors.grey,
-        currentIndex: 1,
-        onTap: (index) {
-          if (index == 2) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => ResourcesScreen()),
-            );
-          } else if (index == 0) {
-            Navigator.pop(context);
-          }
-        },
-        items: [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline), label: 'Chat'),
-          BottomNavigationBarItem(icon: Icon(Icons.location_on_outlined), label: 'Resources'),
-          
-        ],
-      ),
-    );
+  void dispose() {
+    channel.sink.close();
+    super.dispose();
   }
 
   Widget _buildMessageComposer() {
@@ -195,37 +142,60 @@ void _updateAIResponse(String message) {
     );
   }
 
-  @override
-  void dispose() {
-    channel.sink.close();
-    super.dispose();
+  Widget _buildChatList() {
+    return ListView.builder(
+      controller: _scrollController,
+      padding: EdgeInsets.all(16),
+      itemCount: _messages.length + (_isReceivingResponse ? 1 : 0),
+      itemBuilder: (context, index) {
+        if (index < _messages.length) {
+          return ChatBubble(message: _messages[index]);
+        } else {
+          return Padding(
+            padding: EdgeInsets.symmetric(vertical: 10),
+            child: Center(child: CircularProgressIndicator(color: Color(0xFF6C63FF))),
+          );
+        }
+      },
+    );
   }
 
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Color(0xFFF0F4FF),
+      appBar: AppBar(
+        title: Text('AI Therapist Chat', style: TextStyle(color: Colors.white)),
+        backgroundColor: Color(0xFF6C63FF),
+        elevation: 0,
+      ),
+      body: Column(
+        children: [
+          Expanded(child: _buildChatList()),
+          if (_isReceivingResponse) LinearProgressIndicator(color: Color(0xFF6C63FF)),
+          _buildMessageComposer(),
+        ],
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: 1,
+        selectedItemColor: Color(0xFFFF6584),
+        unselectedItemColor: Colors.grey,
+        onTap: (index) {
+          if (index == 2) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => ResourcesScreen()),
+            );
+          } else if (index == 0) {
+            Navigator.pop(context);
+          }
+        },
+        items: [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline), label: 'Chat'),
+          BottomNavigationBarItem(icon: Icon(Icons.location_on_outlined), label: 'Resources'),
+        ],
+      ),
+    );
+  }
 }
-
-// class ChatBubble extends StatelessWidget {
-//   final Message message;
-
-//   ChatBubble({required this.message});
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Container(
-//       margin: EdgeInsets.symmetric(vertical: 8),
-//       alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
-//       child: Container(
-//         padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-//         decoration: BoxDecoration(
-//           color: message.isUser ? Color(0xFF4285F4) : Colors.white,
-//           borderRadius: BorderRadius.circular(20),
-//         ),
-//         child: Text(
-//           message.text,
-//           style: TextStyle(
-//             color: message.isUser ? Colors.white : Colors.black,
-//           ),
-//         ),
-//       ),
-//     );
-//   }
-// }

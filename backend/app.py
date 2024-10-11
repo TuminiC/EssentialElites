@@ -1,15 +1,12 @@
+from functools import lru_cache
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from ibm_watsonx_ai.foundation_models import ModelInference
 from pydantic import BaseModel
 from ibm_watsonx_ai.foundation_models.utils.enums import DecodingMethods
-from fastapi.responses import StreamingResponse
-import asyncio
 from ibm_watsonx_ai.metanames import GenTextParamsMetaNames as GenParams
-from geopy.geocoders import Nominatim
-from geopy.distance import geodesic
+from typing import List, Dict, Union
 import json
-from ibm_watsonx_ai import Credentials, APIClient
 
 
 app = FastAPI()
@@ -21,22 +18,9 @@ app.add_middleware(
     allow_methods=["*"],  # Allows all methods
     allow_headers=["*"],  # Allows all headers
 )
-credentials = Credentials(
-    api_key="",
-    url="https://us-south.ml.cloud.ibm.com")
 
-client = APIClient(credentials, project_id="")
-
-# model_inference = ModelInference(
-#     model_id="meta-llama/llama-3-4b-chat",
-#     credentials={
-#         "apikey": "qfdquM_AZ74d9vsvEx52RgQ8A3JQ5T-107wndG_Gj9WW",
-#         "url": "https://us-south.ml.cloud.ibm.com"
-#     },
-#     project_id="9defbb65-08e4-4b1b-88b3-4b1d01ffda3e"
-#     )
 generate_params = {
-    GenParams.MAX_NEW_TOKENS: 500,
+    GenParams.MAX_NEW_TOKENS: 100,
     GenParams.MIN_NEW_TOKENS: 10,
     GenParams.TEMPERATURE: 0.2,
     GenParams.TOP_K: 50,
@@ -57,6 +41,7 @@ model_inference = ModelInference(
 class ChatMessage(BaseModel):
     message: str
 
+@lru_cache(maxsize=100)
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
@@ -65,14 +50,28 @@ async def websocket_endpoint(websocket: WebSocket):
             data = await websocket.receive_text()
             user_message = json.loads(data)["message"]
 
-            prompt = f"""
-You are a mental health support chatbot. A user has asked the following:
+            prompt = f"""You are an experienced, empathetic, and professional mental health therapist. Your role is to provide supportive, insightful, and therapeutic responses to clients seeking mental health assistance. Respond to the following client message as if you were in a therapy session:
+
 "{user_message}"
-Please respond with relevant mental health resources and support services, particularly for Montreal, 
-and provide emotionally supportive advice based on the user's concerns. 
-Please only return Montreal resources if they ask for where to get Mental Health Support.
-Please return Montreal specific communities if they ask for support groups or communities in Montreal.
-If the user is happy, provide a positive response. Please add 5 !'s before your generated response.
+
+Guidelines:
+1. Begin with a warm, professional greeting if this is the start of the conversation.
+2. Use active listening techniques, reflecting back the client's feelings and concerns.
+3. Ask open-ended questions to encourage the client to explore their thoughts and emotions further.
+4. Provide empathetic responses that validate the client's experiences and feelings.
+5. Offer insights and gentle interpretations based on the information provided.
+6. Suggest evidence-based coping strategies or techniques relevant to the client's situation.
+7. If appropriate, introduce concepts from established therapeutic approaches (e.g., CBT, DBT, ACT).
+8. Maintain professional boundaries while being supportive and compassionate.
+9. If the client expresses severe distress or suicidal thoughts, prioritize their safety and provide crisis resources.
+10. Encourage the client to continue their therapeutic journey, either in this conversation or with in-person professional help.
+
+Remember:
+- Maintain a calm, non-judgmental, and supportive tone throughout the interaction.
+- Respect client confidentiality and privacy (don't ask for personal identifying information).
+- Avoid making diagnoses or prescribing medications.
+- If asked about Montreal-specific resources, provide relevant local information for mental health support.
+
 """
 
             try:
@@ -89,7 +88,11 @@ If the user is happy, provide a positive response. Please add 5 !'s before your 
                 await websocket.send_text("An error occurred while generating the response.")
     except WebSocketDisconnect:
         print("WebSocket disconnected")
+    except Exception as e:
+        print(f"Unexpected error in WebSocket connection: {str(e)}")
+        await websocket.close(code=1011, reason="Unexpected error in WebSocket connection")
 
+@lru_cache(maxsize=100)
 @app.post("/resources")
 async def get_resources(data: dict):
     print(data)
@@ -99,19 +102,28 @@ async def get_resources(data: dict):
     if not latitude or not longitude:
         return {"error": "Latitude and longitude are required"}
 
-    prompt = f"""Generate a JSON array of 5 mental health resources near the coordinates: {latitude}, {longitude}. Each resource should have the following properties: name, type, address, and phone. Ensure the output is a valid JSON array and nothing else. Do not include any additional text or formatting.
+    prompt = f"""Generate a JSON array of 5 mental health resources near the coordinates: {latitude}, {longitude}. Each resource should be realistic, relevant, and potentially helpful for someone seeking mental health support in this area.
+
+Include the following properties for each resource:
+1. name: The name of the mental health facility or service provider.
+2. type: The type of service offered (e.g., Therapy, Counseling, Support Group, Crisis Hotline).
+3. address: A plausible address for the resource, including street, city, state/province, and postal code.
+4. phone: A realistic phone number in the local format.
+5. description: A brief (1-2 sentence) description of the services offered.
+
+Ensure the output is a valid JSON array and nothing else. Do not include any additional text or formatting.
 
 Example format:
 [
-  {
-    "name": "Example Counseling Center",
-    "type": "Therapy",
-    "address": "123 Main St, City, State, ZIP",
-    "phone": "(555) 123-4567"
-  },
+  {{
+    "name": "Mindful Wellness Center",
+    "type": "Therapy and Counseling",
+    "address": "123 Main St, Cityville, State, 12345",
+    "phone": "(555) 123-4567",
+    "description": "Offers individual and group therapy sessions with licensed psychologists specializing in anxiety and depression."
+  }},
   ...
 ]"""
-
     try:
         response = model_inference.generate(
             prompt=prompt,
@@ -126,28 +138,22 @@ Example format:
             }
         )
        
-        #resources = parse_resources(response["results"][0]["generated_text"])
         generated_text = response["results"][0]["generated_text"]
         print("Generated text:", generated_text)
-        try:
-            start_index = generated_text.find('[')
-            end_index = generated_text.rfind(']')
-            if start_index != -1 and end_index != -1:
-                resources_text = generated_text[start_index:end_index + 1]
-                print("Extracted resources text:", resources_text)
-                resources_json = json.loads(resources_text)
-                print(resources_json)
-                return {"resources": resources_json}
-            else:
-                print("No valid JSON array found in the generated text.")
-                return {"error": "Invalid response format"}
-        except (ValueError, json.JSONDecodeError) as e:
-            print(f"Error parsing JSON: {str(e)}")
-            return {"error": "Invalid response format"}
+
+        result = parse_resources(generated_text)
+
+        if "error" in result:
+            print(f"Error: {result['error']}")
+            return {"error": result["error"], "error_code": result["error_code"]}, 400
+        else:
+            return {"resources": result["resources"]}
+        
     except Exception as e:
         print(f"Error generating resources: {str(e)}")
-        return {"error": "An error occurred while generating the resources"}
-    
+        return {"error": "An error occurred while generating the resources", "error_code": "500"}, 500
+
+@lru_cache(maxsize=100) 
 @app.websocket("/ws_meditation")
 async def websocket_meditation_endpoint(websocket: WebSocket):
     await websocket.accept()
@@ -156,8 +162,25 @@ async def websocket_meditation_endpoint(websocket: WebSocket):
             data = await websocket.receive_text()
             user_emotion = json.loads(data)["emotion"]
 
-            prompt = f"Generate a short, calming 2-minute guided meditation for someone feeling {user_emotion}. The meditation should be soothing and help the user relax. Include breathing instructions and visualization techniques. Keep the language simple and easy to follow."
+            prompt = f"""Generate a soothing and calming 2-minute guided meditation script for someone feeling {user_emotion}. The meditation should help the user relax and find inner peace.
 
+            Guidelines:
+            1. Start with a brief introduction (2-3 sentences) acknowledging the user's current emotional state.
+            2. Include clear and simple breathing instructions.
+            3. Incorporate a gentle visualization technique relevant to the user's emotion.
+            4. Use calming and positive language throughout.
+            5. Provide a smooth transition between each part of the meditation.
+            6. End with a short (1-2 sentences) positive affirmation or encouragement.
+
+            Structure the meditation as follows:
+            - Introduction
+            - Breathing exercise (30 seconds)
+            - Visualization (60 seconds)
+            - Gentle return to awareness (20 seconds)
+            - Closing affirmation (10 seconds)
+
+            Keep the language simple, easy to follow, and suitable for text-to-speech conversion. Aim for a total word count of approximately 250-300 words.
+        """
             try:
                 await websocket.send_text("Generating your personalized meditation...")
                 response = model_inference.generate_text_stream(
@@ -187,29 +210,69 @@ async def websocket_meditation_endpoint(websocket: WebSocket):
                 await websocket.send_text("An error occurred while generating the meditation.")
     except WebSocketDisconnect:
         print("WebSocket disconnected")
+    except Exception as e:
+        print(f"Unexpected error in WebSocket connection: {str(e)}")
+        await websocket.close(code=1011, reason="Unexpected error in WebSocket connection")
 
-def parse_resources(text):
+def parse_resources(text: str) -> Dict[str, Union[List[Dict[str, str]], str]]:
     try:
-        # Remove any leading/trailing whitespace and parse the JSON
-        print(text)
-        resources_json = json.loads(text.strip())
-        print(resources_json)
+        # Remove any leading/trailing whitespace
+        text = text.strip()
+        
+        # Check if the text starts and ends with square brackets
+        if not (text.startswith('[') and text.endswith(']')):
+            return {
+                "error": "Invalid JSON format: Text must be a JSON array",
+                "error_code": "INVALID_JSON_FORMAT"
+            }
+        
+        # Parse the JSON
+        resources_json = json.loads(text)
+        
+        # Check if the parsed result is a list
+        if not isinstance(resources_json, list):
+            return {
+                "error": "Invalid JSON format: Parsed result is not a list",
+                "error_code": "INVALID_JSON_TYPE"
+            }
         
         # Process each resource in the list
         resources = []
-        for resource in resources_json:
+        for index, resource in enumerate(resources_json):
+            if not isinstance(resource, dict):
+                return {
+                    "error": f"Invalid resource format at index {index}: Not a dictionary",
+                    "error_code": "INVALID_RESOURCE_FORMAT"
+                }
+            
             processed_resource = {
                 "name": resource.get("name", ""),
-                "type": resource.get("typeOfService", ""),
+                "type": resource.get("type", ""),
                 "description": resource.get("description", ""),
                 "address": resource.get("address", ""),
-                "phone": resource.get("phoneNumber", "")
+                "phone": resource.get("phone", "")
             }
+            
+            # Check for missing required fields
+            missing_fields = [field for field, value in processed_resource.items() if not value]
+            if missing_fields:
+                return {
+                    "error": f"Missing required fields in resource at index {index}: {', '.join(missing_fields)}",
+                    "error_code": "MISSING_REQUIRED_FIELDS"
+                }
+            
             resources.append(processed_resource)
         
-        return resources
-    except json.JSONDecodeError as e:
-        print(f"Error parsing JSON: {str(e)}")
-        return []
+        return {"resources": resources}
     
+    except json.JSONDecodeError as e:
+        return {
+            "error": f"JSON parsing error: {str(e)}",
+            "error_code": "JSON_PARSE_ERROR"
+        }
+    except Exception as e:
+        return {
+            "error": f"Unexpected error: {str(e)}",
+            "error_code": "UNEXPECTED_ERROR"
+        }
 

@@ -24,8 +24,8 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
   Future<void> _loadResources() async {
     setState(() => _isLoading = true);
     try {
-        final resources = await _locationService.getNearbyResources();
-        setState(() {
+      final resources = await _locationService.getNearbyResources();
+      setState(() {
         _resources = resources;
         _isLoading = false;
         _errorMessage = '';
@@ -36,10 +36,47 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
         _isLoading = false;
       });
     }
-      
   }
 
-   @override
+  Widget _buildResourceList() {
+    if (_isLoading) {
+      return SliverFillRemaining(
+        child: Center(child: CircularProgressIndicator(color: Color(0xFF6C63FF))),
+      );
+    } else if (_errorMessage.isNotEmpty) {
+      return SliverFillRemaining(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(_errorMessage),
+              SizedBox(height: 10),
+              ElevatedButton(
+                onPressed: _loadResources,
+                child: Text('Retry'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFF6C63FF),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    } else if (_resources.isEmpty) {
+      return SliverFillRemaining(
+        child: Center(child: Text('No resources found nearby.', style: TextStyle(color: Colors.grey))),
+      );
+    } else {
+      return SliverList(
+        delegate: SliverChildBuilderDelegate(
+          (context, index) => ResourceCard(resource: _resources[index]),
+          childCount: _resources.length,
+        ),
+      );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Color(0xFFF0F4FF),
@@ -48,7 +85,7 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
           SliverAppBar(
             title: Text(
               'Local Resources',
-              style: TextStyle(color: Color(0xFF4285F4), fontWeight: FontWeight.bold),
+              style: TextStyle(color: Color(0xFF6C63FF), fontWeight: FontWeight.bold),
             ),
             backgroundColor: Colors.white,
             floating: true,
@@ -67,10 +104,9 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: Colors.white,
-        selectedItemColor: Color(0xFF4285F4),
-        unselectedItemColor: Colors.grey,
         currentIndex: 2,
+        selectedItemColor: Color(0xFFFF6584),
+        unselectedItemColor: Colors.grey,
         onTap: (index) {
           if (index == 1) {
             Navigator.pushReplacement(
@@ -88,39 +124,5 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
         ],
       ),
     );
-  }
-
-    Widget _buildResourceList() {
-    if (_isLoading) {
-      return SliverFillRemaining(
-        child: Center(child: CircularProgressIndicator()),
-      );
-    } else if (_errorMessage.isNotEmpty) {
-      return SliverFillRemaining(
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(_errorMessage),
-              ElevatedButton(
-                onPressed: _loadResources,
-                child: Text('Retry'),
-              ),
-            ],
-          ),
-        ),
-      );
-    } else if (_resources.isEmpty) {
-      return SliverFillRemaining(
-        child: Center(child: Text('No resources found.')),
-      );
-    } else {
-      return SliverList(
-        delegate: SliverChildBuilderDelegate(
-          (context, index) => ResourceCard(resource: _resources[index]),
-          childCount: _resources.length,
-        ),
-      );
-    }
   }
 }

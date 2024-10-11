@@ -1,36 +1,52 @@
 import 'package:flutter/material.dart';
 
-class EmotionSelector extends StatelessWidget {
+class EmotionSelector extends StatefulWidget {
   final Function(String) onEmotionSelected;
 
   EmotionSelector({required this.onEmotionSelected});
 
-  final List<String> emotions = ['Anxious', 'Stressed', 'Sad', 'Angry', 'Happy', 'Calm'];
+  @override
+  _EmotionSelectorState createState() => _EmotionSelectorState();
+}
+
+class _EmotionSelectorState extends State<EmotionSelector> {
+  String? _selectedEmotion;
+
+  final List<Map<String, dynamic>> emotions = [
+    {'label': 'Happy', 'icon': Icons.sentiment_satisfied, 'color': Colors.yellow},
+    {'label': 'Sad', 'icon': Icons.sentiment_dissatisfied, 'color': Colors.blue},
+    {'label': 'Anxious', 'icon': Icons.sentiment_neutral, 'color': Colors.orange},
+    {'label': 'Calm', 'icon': Icons.self_improvement, 'color': Colors.green},
+    // Add more emotions as needed
+  ];
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 50,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: emotions.length,
-        itemBuilder: (context, index) {
-          return Padding(
-            padding: const EdgeInsets.only(right: 10.0),
-            child: ElevatedButton(
-              onPressed: () => onEmotionSelected(emotions[index]),
-              child: Text(emotions[index]),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: Color(0xFF0077BE),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-              ),
+    return Wrap(
+      spacing: 12,
+      children: emotions.map((emotion) {
+        bool isSelected = _selectedEmotion == emotion['label'];
+        return GestureDetector(
+          onTap: () {
+            setState(() {
+              _selectedEmotion = emotion['label'];
+            });
+            widget.onEmotionSelected(emotion['label']);
+          },
+          child: Chip(
+            avatar: Icon(
+              emotion['icon'],
+              color: Colors.white,
             ),
-          );
-        },
-      ),
+            label: Text(
+              emotion['label'],
+              style: TextStyle(color: Colors.white),
+            ),
+            backgroundColor: isSelected ? emotion['color'] : Colors.grey,
+            shape: StadiumBorder(),
+          ),
+        );
+      }).toList(),
     );
   }
 }
