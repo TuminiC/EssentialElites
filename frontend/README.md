@@ -1,15 +1,15 @@
-# 🧠 MindfulChat Frontend
+# 🧠 The MindGuard Frontend
 
-## 📱 About MindfulChat
+## 📱 About MindGuard
 
-MindfulChat is a Flutter-based mobile application designed to provide mental health support and resources. Our app offers a user-friendly interface for chatting with an AI therapist and finding local mental health resources.
+MindGuard is a Flutter-based mobile application designed to provide mental health support and resources. Our app offers a user-friendly interface for chatting with an AI therapist and finding local mental health resources.
 
-![MindfulChat Screenshot](assets/images/app_screenshot.png)
+![mgapp](https://github.com/user-attachments/assets/940a3daf-9738-498a-853a-113f1b2902a9)
 
 ## ✨ Key Features
 
-- 💬 Chat with AI Therapist: Get instant support and guidance
-- 🗺️ Local Resources: Find mental health services near you
+- 💬 AI-based Health Chat: Get instant support and guidance
+- 🗺️ Nearby Clinic Locator: Find mental health services near you
 - 🎨 Sleek UI: Intuitive and calming user interface
 - 📱 Cross-Platform: Available on iOS and Android
 
