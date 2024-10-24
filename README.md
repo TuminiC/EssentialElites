@@ -37,8 +37,6 @@ On the back-end, Python powers the app's business logic and API communication. T
 __Benefits of the Solution__:
 The MindGuard app combines these three features to offer a comprehensive tool for mental health support. By integrating real-time AI assistance, location-based healthcare access, and personalized mindfulness exercises, the app empowers users to take control of their mental well-being. Whether users need urgent medical help, emotional support, or a moment of calm, the app provides solutions that are both practical and meaningful. Overall, the MindGuard app is a powerful resource for individuals in need of mental health support, offering a mix of technological innovation and compassionate care to help users through challenging moments.
 
-More detail is available in our [Description document](./docs/DESCRIPTION.md).
-
 ## Technology implementation
 
 ### IBM watsonx product(s) used
